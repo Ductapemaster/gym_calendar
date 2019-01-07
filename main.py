@@ -141,7 +141,9 @@ def main():
                 'status': 'tentative',
                 'summary': "Spin with {}".format(c.instructor_name),
                 'location': c.gym.address,
-                'description': "{} with {}: {} minutes".format(c.class_name, c.instructor_name, c.duration.total_seconds() / 60),
+                'description': "{} with {}: {} minutes".format(c.class_name,
+                                                               c.instructor_name,
+                                                               int(c.duration.total_seconds() / 60)),
                 'start': {
                     'dateTime': c.start_time.strftime("%Y-%m-%dT%H:%M:%S%z"),
                     'timeZone': 'America/Los_Angeles',
@@ -150,6 +152,7 @@ def main():
                     'dateTime': c.end_time.strftime("%Y-%m-%dT%H:%M:%S%z"),
                     'timeZone': 'America/Los_Angeles',
                 },
+                'attendees': [{'email': email} for email in secrets.invite_addresses if type(email) == str],
                 'reminders': {
                     'useDefault': False,
                     'overrides': [

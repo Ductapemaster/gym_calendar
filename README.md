@@ -23,4 +23,5 @@ some sort of issue with the "Trash" for the calendars.  After deleting events, a
 assigned to each event by the script are thrown back in an error message claiming they still exist.
 
 ## Future Features
-- Configure runs via a file listing the classes you wanted, and what calendars they map to
+- [ ] Configure runs via a file listing the classes you wanted, and what calendars they map to
+- [ ] Create database of gyms with IDs, addresses, etc from the API.  Add to the gym object for automatic data population
