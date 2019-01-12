@@ -7,6 +7,7 @@ from httplib2 import Http
 from oauth2client import file, client, tools
 import hashlib
 import secrets
+import config
 
 class Gym:
     def __init__(self, id_number, address, shortname, target_calendar):
@@ -36,14 +37,32 @@ def get_request_url(gym, day_offset=0):
                      "currentWeek?targetDate={}".format((datetime.now() + timedelta(days=day_offset)).strftime(date_format_string))])
 
 
-def get_classes(gym):
-    try:
-        r = requests.get(url=get_request_url(gym)).json()
-    except Exception as e:
-        print("Error occurred during request: {}".format(e))
-        r = None
+def get_classes(gym, day_offset=0, retries=3):
 
-    return r
+    # Perform API request
+    data = None
+    url = get_request_url(gym, day_offset=day_offset)
+    while data is None and retries > 0:
+        try:
+            start = datetime.now()
+            data = requests.get(url=url).json()
+            print("Request to {} completed in {} seconds".format(url, (datetime.now() - start).total_seconds()))
+        except Exception as e:
+            print("Request to {} failed with error: ".format(url, e))
+            data = None
+        finally:
+            retries -= 1
+
+    # Process received class list into our data structure
+    classes = []
+    if data is not None:
+        for day in data.keys():
+            for group_class in data[day]:
+                classes.append(GroupClass(group_class, gym))
+    else:
+        print("Retries exceeded")
+
+    return classes
 
 
 class GroupClass:
@@ -99,28 +118,21 @@ def main():
     # with open("response.txt", "r") as f:
     #     data = json.loads(f.read())
 
-    classes = []
+    group_classes = []
 
     for gym in [goleta, uptown, downtown]:
-
-        data = None
-        retries = 3
-        while data is None and retries > 0:
-            data = get_classes(gym)
-            retries -= 1
-
-        if data is not None:
-            for day in data.keys():
-                for group_class in data[day]:
-                    classes.append(GroupClass(group_class, gym))
+        if config.weeks_to_grab > 0:
+            for num_weeks in range(0, config.weeks_to_grab):
+                classes_to_add = get_classes(gym, day_offset=7*num_weeks)
+                group_classes.extend(classes_to_add)
+                print("{} classes loaded".format(len(classes_to_add)))
         else:
-            print("Gym data request failed for {} location".format(gym.shortname))
+            ValueError("weeks_to_grab in config.py must be greater than 0!")
 
-        print("{} classes loaded (total)".format(len(classes)))
+    # Filter group classes by what we want
+    filtered_classes = [group_class for group_class in group_classes if group_class.class_name in config.class_filter]
+    print("Total classes after filter: {}".format(len(filtered_classes)))
 
-    """Shows basic usage of the Google Calendar API.
-    Prints the start and name of the next 10 events on the user's calendar.
-    """
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
@@ -131,53 +143,52 @@ def main():
         creds = tools.run_flow(flow, store)
     service = build('calendar', 'v3', http=creds.authorize(Http()))
 
-    # Call the Calendar API for event creation only on the spin classes
-    for c in classes:
-        if c.class_name == "GGX Cycle":
+    # Call the Calendar API for event creation only on the desired classes from config.py
+    for group_class in filtered_classes:
 
-            # Create event data
-            event = {
-                'id': c.hash,
-                'status': 'tentative',
-                'summary': "Spin with {}".format(c.instructor_name),
-                'location': c.gym.address,
-                'description': "{} with {}: {} minutes".format(c.class_name,
-                                                               c.instructor_name,
-                                                               int(c.duration.total_seconds() / 60)),
-                'start': {
-                    'dateTime': c.start_time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-                    'timeZone': 'America/Los_Angeles',
-                },
-                'end': {
-                    'dateTime': c.end_time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-                    'timeZone': 'America/Los_Angeles',
-                },
-                'attendees': [{'email': email} for email in secrets.invite_addresses if type(email) == str],
-                'reminders': {
-                    'useDefault': False,
-                    'overrides': [
-                    ],
-                },
-            }
+        # Create event data
+        event = {
+            'id': group_class.hash,
+            'status': 'tentative',
+            'summary': "{} with {}".format(group_class.class_name, group_class.instructor_name),
+            'location': group_class.gym.address,
+            'description': "{} with {}: {} minutes".format(group_class.class_name,
+                                                           group_class.instructor_name,
+                                                           int(group_class.duration.total_seconds() / 60)),
+            'start': {
+                'dateTime': group_class.start_time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                'timeZone': config.event_timezone,
+            },
+            'end': {
+                'dateTime': group_class.end_time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                'timeZone': config.event_timezone,
+            },
+            'attendees': [{'email': email} for email in secrets.invite_addresses if type(email) == str],
+            'reminders': {
+                'useDefault': False,
+                'overrides': [
+                ],
+            },
+        }
 
-            # Add a new or update an existing calendar event
-            # Try-except needed because if event doesn't exist, the get() function returns a 400 error
-            try:
-                response = service.events().get(calendarId=c.gym.target_calendar, eventId=c.hash).execute()
-                if response["status"] != "cancelled":
-                    # Update the existing event
-                    response = service.events().update(calendarId=c.gym.target_calendar, eventId=c.hash, body=event).execute()
-                    print('Event updated: %s' % (response.get('htmlLink')))
-                else:
-                    # If event id cancelled, attempt to delete it and recreate it.
-                    # Anecdotal evidences says this DOES NOT work.
-                    response = service.events().delete(calendarId=c.gym.target_calendar, eventId=c.hash).execute()
-                    reponse = service.events().insert(calendarId=c.gym.target_calendar, body=event).execute()
-                    print('Event deleted and created: %s' % (response.get('htmlLink')))
-            except googleapiclient.errors.HttpError:
-                # Event doesn't exist - create it
-                response = service.events().insert(calendarId=c.gym.target_calendar, body=event).execute()
-                print('Event created: %s' % (response.get('htmlLink')))
+        # Add a new or update an existing calendar event
+        # Try-except needed because if event doesn't exist, the get() function returns a 400 error
+        try:
+            response = service.events().get(calendarId=group_class.gym.target_calendar, eventId=group_class.hash).execute()
+            if response["status"] != "cancelled":
+                # Update the existing event
+                response = service.events().update(calendarId=group_class.gym.target_calendar, eventId=group_class.hash, body=event).execute()
+                print('Event updated: %s' % (response.get('htmlLink')))
+            else:
+                # If event id cancelled, attempt to delete it and recreate it.
+                # Anecdotal evidences says this DOES NOT work.
+                response = service.events().delete(calendarId=group_class.gym.target_calendar, eventId=group_class.hash).execute()
+                reponse = service.events().insert(calendarId=group_class.gym.target_calendar, body=event).execute()
+                print('Event deleted and created: %s' % (response.get('htmlLink')))
+        except googleapiclient.errors.HttpError:
+            # Event doesn't exist - create it
+            response = service.events().insert(calendarId=group_class.gym.target_calendar, body=event).execute()
+            print('Event created: %s' % (response.get('htmlLink')))
 
 
 if __name__ == '__main__':
