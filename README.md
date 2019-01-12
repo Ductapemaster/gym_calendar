@@ -24,4 +24,7 @@ assigned to each event by the script are thrown back in an error message claimin
 
 ## Future Features
 - [ ] Configure runs via a file listing the classes you wanted, and what calendars they map to
+    - Partially done - class filter is now available in config.py
 - [ ] Create database of gyms with IDs, addresses, etc from the API.  Add to the gym object for automatic data population
+    - [ ] Add gym selections to config.py
+- [ ] Create validation function for config.py and secrets.py 
