@@ -89,6 +89,31 @@ class GroupClass:
             self.duration = None
             print("Exception occurred while parsing JSON into class: {}".format(e))
 
+    def event_object(self, attendees=[]):
+        return {
+            'id': self.hash,
+            'status': 'tentative',
+            'summary': "{} with {}".format(self.class_name, self.instructor_name),
+            'location': self.gym.address,
+            'description': "{} with {}: {} minutes".format(self.class_name,
+                                                           self.instructor_name,
+                                                           int(self.duration.total_seconds() / 60)),
+            'start': {
+                'dateTime': self.start_time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                'timeZone': config.event_timezone,
+            },
+            'end': {
+                'dateTime': self.end_time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                'timeZone': config.event_timezone,
+            },
+            'attendees': [{'email': email} for email in attendees if type(email) == str],
+            'reminders': {
+                'useDefault': False,
+                'overrides': [
+                ],
+            },
+        }
+
     def __repr__(self):
         return "Class:      {}\n" \
                "Instructor: {}\n" \
@@ -154,29 +179,7 @@ def main():
     for group_class in filtered_classes:
 
         # Create event data
-        event = {
-            'id': group_class.hash,
-            'status': 'tentative',
-            'summary': "{} with {}".format(group_class.class_name, group_class.instructor_name),
-            'location': group_class.gym.address,
-            'description': "{} with {}: {} minutes".format(group_class.class_name,
-                                                           group_class.instructor_name,
-                                                           int(group_class.duration.total_seconds() / 60)),
-            'start': {
-                'dateTime': group_class.start_time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-                'timeZone': config.event_timezone,
-            },
-            'end': {
-                'dateTime': group_class.end_time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-                'timeZone': config.event_timezone,
-            },
-            'attendees': [{'email': email} for email in secrets.invite_addresses if type(email) == str],
-            'reminders': {
-                'useDefault': False,
-                'overrides': [
-                ],
-            },
-        }
+        event = group_class.event_object(attendees=secrets.invite_addresses)
 
         # Add a new or update an existing calendar event
         # Try-except needed because if event doesn't exist, the get() function returns a 400 error
