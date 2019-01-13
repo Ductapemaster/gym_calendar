@@ -9,8 +9,9 @@ import hashlib
 import secrets
 import config
 
+
 class Gym:
-    def __init__(self, id_number, address, shortname, target_calendar):
+    def __init__(self, id_number, address, shortname, target_calendar="primary"):
         self.id_number = id_number
         self.address = address
         self.shortname = shortname
@@ -18,11 +19,6 @@ class Gym:
 
     def __repr__(self):
         return "{} ({}): {}".format(self.shortname, self.id_number, self.address)
-
-
-goleta = Gym(1849, "Gold's Gym Goleta 6144 Calle Real Suite 101 Goleta CA 93117", "Goleta", secrets.goleta_calendar_id)
-uptown = Gym(1848, "Gold's Gym Uptown 3908 State Street Santa Barbara CA 93105", "Uptown", secrets.uptown_calendar_id)
-downtown = Gym(1847, "Gold's Gym Downtown 21 W. Carrillo Street Santa Barbara CA 93101", "Downtown", secrets.downtown_calendar_id)
 
 
 def get_request_url(gym, day_offset=0):
@@ -39,7 +35,7 @@ def get_request_url(gym, day_offset=0):
 
 def get_classes(gym, day_offset=0, retries=3):
 
-    # Perform API request
+    # Perform API requests
     data = None
     url = get_request_url(gym, day_offset=day_offset)
     while data is None and retries > 0:
@@ -131,8 +127,17 @@ def main():
 
     group_classes = []
 
-    for gym in [goleta, uptown, downtown]:
+    # Read in gyms from config and appropriate target calendars from secrets
+    gyms = [Gym(**gym) for gym in config.gyms]
+
+    for gym in gyms:
         if config.weeks_to_grab > 0:
+
+            # Set up target calendar if prescribed in secrets.py
+            if gym.id_number in secrets.calendar_mapping:
+                gym.target_calendar = secrets.calendar_mapping[gym.id_number]
+
+            # Go query the API
             for num_weeks in range(0, config.weeks_to_grab):
                 classes_to_add = get_classes(gym, day_offset=7*num_weeks)
                 group_classes.extend(classes_to_add)
