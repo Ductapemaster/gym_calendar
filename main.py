@@ -111,6 +111,17 @@ class GroupClass:
 # If modifying these scopes, delete the file token.json.
 SCOPES = 'https://www.googleapis.com/auth/calendar'
 
+def open_api():
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    store = file.Storage('token.json')
+    creds = store.get()
+    if not creds or creds.invalid:
+        flow = client.flow_from_clientsecrets('credentials.json', SCOPES)
+        creds = tools.run_flow(flow, store)
+    return build('calendar', 'v3', http=creds.authorize(Http()))
+
 def main():
 
     # Optionally load JSON from file
@@ -133,17 +144,8 @@ def main():
     filtered_classes = [group_class for group_class in group_classes if group_class.class_name in config.class_filter]
     print("Total classes after filter: {}".format(len(filtered_classes)))
 
-    # The file token.json stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
-    store = file.Storage('token.json')
-    creds = store.get()
-    if not creds or creds.invalid:
-        flow = client.flow_from_clientsecrets('credentials.json', SCOPES)
-        creds = tools.run_flow(flow, store)
-    service = build('calendar', 'v3', http=creds.authorize(Http()))
-
     # Call the Calendar API for event creation only on the desired classes from config.py
+    service = open_api()
     for group_class in filtered_classes:
 
         # Create event data
