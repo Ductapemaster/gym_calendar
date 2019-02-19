@@ -1,10 +1,7 @@
 import requests
 from datetime import datetime, timedelta
-import json
 from googleapiclient.discovery import build
 import googleapiclient.errors
-from httplib2 import Http
-from oauth2client import file, client, tools
 from google.oauth2 import service_account
 import hashlib
 import secrets
