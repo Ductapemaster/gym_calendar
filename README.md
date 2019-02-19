@@ -11,11 +11,11 @@ and if so, update them with the most recent data.  If an event doesn't exist, it
 
 ## Files
 - `main.py`: main script.  Run this in the terminal to load up the calendars.
-- `credentials.json`: Google Calendar API credentials, which need to be generated from Google's website.
-- `token.json`: Created by the OAuth code for calendar authentication.  See the Google API reference for more details.
+- `credentials.json`: Google Service Account credentials.  Information on how to generate this file is [here](https://developers.google.com/identity/protocols/OAuth2ServiceAccount)
 - `secrets.py`: Contains calendar IDs used for the endpoints for the created events.
 
 ## Notes
+- A Google Service account is required for use of this script.  Follow the link above under `credentials.json` to generate.
 - The Gold's Gym website is notoriously slow, and requests for API data have taken up to 10 seconds to complete.
 - Sometimes requests fail, and as a bit of a brute force attempt to deal with this, the script will try each request a maximum of 3 times.
 - Deleting events off of the calendar is an issue, and the script will not be able to recreate them.  There appears to be
@@ -26,5 +26,6 @@ assigned to each event by the script are thrown back in an error message claimin
 - [ ] Configure runs via a file listing the classes you wanted, and what calendars they map to
     - Partially done - class filter is now available in config.py
 - [ ] Create database of gyms with IDs, addresses, etc from the API.  Add to the gym object for automatic data population
-    - [ ] Add gym selections to config.py
-- [ ] Create validation function for config.py and secrets.py 
+    - [x] Add gym selections to config.py
+- [ ] Create validation function for config.py and secrets.py
+- [ ] Add ability to adjust time of event by either extending the start time earlier, or end time later (to account for travel, etc) 
