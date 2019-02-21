@@ -33,3 +33,5 @@ gyms = [
         'shortname': "Downtown",
     }
 ]
+
+rate_limit_delay = 0.5

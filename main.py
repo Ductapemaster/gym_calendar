@@ -7,6 +7,7 @@ import hashlib
 import secrets
 import config
 import logging
+from time import sleep
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -188,6 +189,9 @@ def main():
     # Call the Calendar API for event creation only on the desired classes from config.py
     service = open_api()
     for group_class in filtered_classes:
+
+        # Delay to prevent rate limiting
+        sleep(config.rate_limit_delay)
 
         # Create event data
         event = group_class.event_object(attendees=secrets.invite_addresses)
