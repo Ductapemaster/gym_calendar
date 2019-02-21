@@ -6,6 +6,14 @@ from google.oauth2 import service_account
 import hashlib
 import secrets
 import config
+import logging
+
+logger = logging.getLogger('main')
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s %(levelname)8s [ %(name)s ]: %(message)s')
+ch = logging.StreamHandler()
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
 
 class Gym:
@@ -14,6 +22,7 @@ class Gym:
         self.address = address
         self.shortname = shortname
         self.target_calendar = target_calendar
+        logger.debug("Create instance of Gym object: {}".format(self.__repr__()))
 
     def __repr__(self):
         return "{} ({}): {}".format(self.shortname, self.id_number, self.address)
@@ -23,12 +32,14 @@ def get_request_url(gym, day_offset=0):
 
     api_url_prefix = "https://www.goldsgym.com/api"
     date_format_string = "%Y-%m-%d"
-
-    return "/".join([api_url_prefix,
+    url = "/".join([api_url_prefix,
                      "gyms",
                      str(gym.id_number),
                      "schedules",
                      "currentWeek?targetDate={}".format((datetime.now() + timedelta(days=day_offset)).strftime(date_format_string))])
+
+    logger.debug('Generated Gym API URL: {}'.format(url))
+    return url
 
 
 def get_classes(gym, day_offset=0, retries=3):
@@ -38,11 +49,10 @@ def get_classes(gym, day_offset=0, retries=3):
     url = get_request_url(gym, day_offset=day_offset)
     while data is None and retries > 0:
         try:
-            start = datetime.now()
             data = requests.get(url=url).json()
-            print("Request to {} completed in {} seconds".format(url, (datetime.now() - start).total_seconds()))
+            logger.info("Request to {} completed".format(url))
         except Exception as e:
-            print("Request to {} failed with error: ".format(url, e))
+            logger.error("Request to {} FAILED".format(url))
             data = None
         finally:
             retries -= 1
@@ -54,8 +64,9 @@ def get_classes(gym, day_offset=0, retries=3):
             for group_class in data[day]:
                 classes.append(GroupClass(group_class, gym))
     else:
-        print("Retries exceeded")
+        logger.error("Retries for url {} exceeded - forfeiting".format(url))
 
+    logger.info("{} classes retrieved from url {}".format(len(classes), url))
     return classes
 
 
@@ -78,14 +89,13 @@ class GroupClass:
             unique_id = str(class_id) + str(gym_id) + str(instructor_id) + start_date_string + end_date_string
             self.hash = hashlib.sha3_256(unique_id.encode('utf-8')).hexdigest()
 
-
         except Exception as e:
             self.class_name = ""
             self.instructor_name = ""
             self.start_time = None
             self.end_time = None
             self.duration = None
-            print("Exception occurred while parsing JSON into class: {}".format(e))
+            logging.error("Error parsing JSON into class", exc_info=True)
 
     def event_object(self, attendees=[]):
         return {
@@ -132,11 +142,14 @@ SERVICE_ACCOUNT_FILE = 'service.json'
 
 
 def open_api():
+    logger.debug("Attempting to open API")
     credentials = service_account.Credentials.from_service_account_file(
         SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+    logger.debug("Using credentials file {}".format(SERVICE_ACCOUNT_FILE))
     if not credentials:
-        print("Invalid credentials!")
+        logger.error("Invalid credentials!")
         exit(-1)
+    logger.debug("Open API success!")
     return build('calendar', 'v3', credentials=credentials)
 
 
@@ -163,13 +176,13 @@ def main():
             for num_weeks in range(0, config.weeks_to_grab):
                 classes_to_add = get_classes(gym, day_offset=7*num_weeks)
                 group_classes.extend(classes_to_add)
-                print("{} classes loaded".format(len(classes_to_add)))
+                logger.info("{} classes loaded".format(len(classes_to_add)))
         else:
             ValueError("weeks_to_grab in config.py must be greater than 0!")
 
     # Filter group classes by what we want
     filtered_classes = [group_class for group_class in group_classes if group_class.class_name in config.class_filter]
-    print("Total classes after filter: {}".format(len(filtered_classes)))
+    logger.info("Total classes after filter: {}".format(len(filtered_classes)))
 
     # Call the Calendar API for event creation only on the desired classes from config.py
     service = open_api()
@@ -185,17 +198,17 @@ def main():
             if response["status"] != "cancelled":
                 # Update the existing event
                 response = service.events().update(calendarId=group_class.gym.target_calendar, eventId=group_class.hash, body=event).execute()
-                print('Event updated: %s' % (response.get('htmlLink')))
+                logger.info("Event updated: {}".format(response.get('htmlLink')))
             else:
                 # If event id cancelled, attempt to delete it and recreate it.
                 # Anecdotal evidences says this DOES NOT work.
                 response = service.events().delete(calendarId=group_class.gym.target_calendar, eventId=group_class.hash).execute()
                 reponse = service.events().insert(calendarId=group_class.gym.target_calendar, body=event).execute()
-                print('Event deleted and created: %s' % (response.get('htmlLink')))
+                logger.info("Event deleted and created: {}".format(response.get('htmlLink')))
         except googleapiclient.errors.HttpError:
             # Event doesn't exist - create it
             response = service.events().insert(calendarId=group_class.gym.target_calendar, body=event).execute()
-            print('Event created: %s' % (response.get('htmlLink')))
+            logger.info("Event created: {}".format(response.get('htmlLink')))
 
 
 if __name__ == '__main__':
