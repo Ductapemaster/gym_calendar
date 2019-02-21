@@ -8,13 +8,14 @@ import secrets
 import config
 import logging
 
-logger = logging.getLogger('main')
+logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s %(levelname)8s [ %(name)s ]: %(message)s')
-ch = logging.StreamHandler()
-ch.setFormatter(formatter)
-logger.addHandler(ch)
 
+formatter = logging.Formatter('%(asctime)s %(levelname)8s [ %(name)s ]: %(message)s')
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+
+logger.addHandler(stream_handler)
 
 class Gym:
     def __init__(self, id_number, address, shortname, target_calendar="primary"):
