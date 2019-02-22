@@ -5,6 +5,9 @@ import config
 
 logger_gym_class = logging.getLogger("gym")
 
+logger_urllib3 = logging.getLogger('urllib3')
+logger_urllib3.setLevel(logging.ERROR)
+
 
 # TODO: split into a parent class that doesn't include the calendar event specific code and a child that does
 class GymClass:

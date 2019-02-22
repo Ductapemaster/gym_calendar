@@ -8,21 +8,18 @@ import logging
 from time import sleep
 
 # TODO: Find a better location for logging instantiation - maybe another file
-logger_main = logging.getLogger('main')
-logger_google_api = logging.getLogger('googleapiclient')
-logger_urllib3 = logging.getLogger('urllib3')
-
-logger_main.setLevel(logging.INFO)
-logger_google_api.setLevel(logging.ERROR)
-logger_urllib3.setLevel(logging.ERROR)
-
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s %(levelname)8s [ %(name)s ]: %(message)s')
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
+logger.addHandler(stream_handler)
 
-logger_main.addHandler(stream_handler)
-logger_google_api.addHandler(stream_handler)
-logger_urllib3.addHandler(stream_handler)
+logger_main = logging.getLogger('main')
+logger_main.setLevel(logging.INFO)
+
+logger_google_api = logging.getLogger('googleapiclient')
+logger_google_api.setLevel(logging.ERROR)
 
 
 def open_api():
