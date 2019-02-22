@@ -5,6 +5,9 @@ from gym_class import GymClass
 
 logger_gym = logging.getLogger("gym")
 
+logger_urllib3 = logging.getLogger('urllib3')
+logger_urllib3.setLevel(logging.ERROR)
+
 
 class Gym:
     def __init__(self, id_number, address, shortname, target_calendar="primary"):
