@@ -34,4 +34,10 @@ gyms = [
     }
 ]
 
+# Delay inserted in between each google API transaction to avoid the application from being rate limited
 rate_limit_delay = 0.5
+
+# Log file configuration
+log_base_path = '/var/log'
+log_file_name = 'gym_calendar.log'
+

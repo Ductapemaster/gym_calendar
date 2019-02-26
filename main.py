@@ -6,17 +6,30 @@ import secrets
 import config
 import logging
 from time import sleep
+from os import path
 
 # TODO: Find a better location for logging instantiation - maybe another file
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s %(levelname)8s [ %(name)s ]: %(message)s')
+
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
+stream_handler.setLevel(logging.INFO)
+
+log_file_full_path = '/'.join([config.log_base_path, config.log_file_name])
+if not path.exists(log_file_full_path):
+    with open(log_file_full_path, 'w'):
+        pass
+
+file_handler = logging.FileHandler(log_file_full_path)
+file_handler.setFormatter(formatter)
+file_handler.setLevel(logging.DEBUG)
+
 logger.addHandler(stream_handler)
+logger.addHandler(file_handler)
 
 logger_main = logging.getLogger('main')
-logger_main.setLevel(logging.INFO)
 
 logger_google_api = logging.getLogger('googleapiclient')
 logger_google_api.setLevel(logging.ERROR)
@@ -41,6 +54,8 @@ def open_api():
 
 def main():
 
+    logger_main.info('Gold\'s Gym Calendar updater script started')
+
     # Optionally load JSON from file
     # data = None
     # with open("response.txt", "r") as f:
@@ -61,11 +76,11 @@ def main():
             # Go query the API
             for num_weeks in range(0, config.weeks_to_grab):
                 gym.query_classes(day_offset=7 * num_weeks)
-                logger_main.info("{} classes loaded".format(len(gym.classes)))
+                logger_main.debug("{} classes loaded".format(len(gym.classes)))
 
                 # Apply filter to get the classes we want
                 filtered_classes = gym.filtered_classes(config.class_filter)
-                logger_main.info("Total classes after filter: {}".format(len(filtered_classes)))
+                logger_main.debug("Total classes after filter: {}".format(len(filtered_classes)))
                 selected_classes.extend(filtered_classes)
 
         else:
@@ -73,6 +88,9 @@ def main():
 
     # Call the Calendar API for event creation only on the desired classes from config.py
     service = open_api()
+    logger_main.info('{} classes to add'.format(len(selected_classes)))
+    events_updated = 0
+    events_created = 0
     for gym_class in selected_classes:
 
         # Delay to prevent rate limiting
@@ -88,17 +106,21 @@ def main():
             if response["status"] != "cancelled":
                 # Update the existing event
                 response = service.events().update(calendarId=gym_class.gym.target_calendar, eventId=gym_class.hash, body=event).execute()
-                logger_main.info("Event updated: {}".format(response.get('htmlLink')))
+                logger_main.debug("Event updated: {}".format(response.get('htmlLink')))
             else:
                 # If event id cancelled, attempt to delete it and recreate it.
                 # Anecdotal evidences says this DOES NOT work.
                 response = service.events().delete(calendarId=gym_class.gym.target_calendar, eventId=gym_class.hash).execute()
                 reponse = service.events().insert(calendarId=gym_class.gym.target_calendar, body=event).execute()
-                logger_main.info("Event deleted and created: {}".format(response.get('htmlLink')))
+                logger_main.debug("Event deleted and created: {}".format(response.get('htmlLink')))
+            events_updated += 1
         except googleapiclient.errors.HttpError:
             # Event doesn't exist - create it
             response = service.events().insert(calendarId=gym_class.gym.target_calendar, body=event).execute()
-            logger_main.info("Event created: {}".format(response.get('htmlLink')))
+            logger_main.debug("Event created: {}".format(response.get('htmlLink')))
+            events_created += 1
+
+    logger_main.info('Calendar updates complete: {} events created, {} updated'.format(events_created, events_updated))
 
 
 if __name__ == '__main__':

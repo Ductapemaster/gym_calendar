@@ -46,7 +46,7 @@ class Gym:
                 data = requests.get(url=url).json()
                 logger_gym.info("Request to {} completed".format(url))
             except Exception as e:
-                logger_gym.warning("Request to {} FAILED".format(url))
+                logger_gym.warning("Request to {} FAILED...{} retries remain".format(url, retries - 1))
                 data = None
             finally:
                 retries -= 1
