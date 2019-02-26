@@ -14,6 +14,9 @@ RUN pip install -r /app/gym_calendar/requirements.txt
 COPY service.json /app/gym_calendar/service.json
 COPY secrets.py /app/gym_calendar/secrets.py
 
+# Set up logging dir
+VOLUME /var/log
+
 # Set up working directory
 WORKDIR /app/gym_calendar
 
