@@ -28,4 +28,4 @@ assigned to each event by the script are thrown back in an error message claimin
 - [ ] Create database of gyms with IDs, addresses, etc from the API.  Add to the gym object for automatic data population
     - [x] Add gym selections to config.py
 - [ ] Create validation function for config.py and secrets.py
-- [ ] Add ability to adjust time of event by either extending the start time earlier, or end time later (to account for travel, etc) 
+- [x] Add ability to adjust time of event by either extending the start time earlier, or end time later (to account for travel, etc) 
