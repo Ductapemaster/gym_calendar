@@ -19,7 +19,7 @@ stream_handler.setLevel(logging.INFO)
 
 log_file_full_path = '/'.join([config.log_base_path, config.log_file_name])
 if not path.exists(log_file_full_path):
-    with open(log_file_full_path, 'w'):
+    with open(log_file_full_path, 'a'):
         pass
 
 file_handler = logging.FileHandler(log_file_full_path)
