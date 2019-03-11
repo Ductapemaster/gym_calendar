@@ -42,6 +42,12 @@ class GymClass:
 
     @classmethod
     def from_json(cls, gym, json_string):
+        """
+        Build an instance of our class from the JSON response from the Gold's Gym API
+        :param gym: Object instance to the gym the class is at
+        :param json_string: API response string
+        :return: Instance of the GymClass class
+        """
         try:
             class_name = json_string["gym_class"]["name"]
             instructor_name = json_string["instructor"]["display_name"]
@@ -77,6 +83,11 @@ class GymClass:
 
     @start_time_buffer.setter
     def start_time_buffer(self, buffer):
+        """
+        We store our buffer time object internally as a timedelta object, so this provides a setter method for a numeric argument
+        :param buffer: Buffer time in minutes to add to beginning of the class
+        :return:
+        """
         if buffer < 0:
             logger_gym_class.warning("Start time buffer value should be a positive value. Continuing with supplied value {}".format(buffer))
         self._start_time_buffer = timedelta(minutes=buffer)
@@ -87,11 +98,21 @@ class GymClass:
 
     @end_time_buffer.setter
     def end_time_buffer(self, buffer):
+        """
+        We store our buffer time object internally as a timedelta object, so this provides a setter method for a numeric argument
+        :param buffer: Buffer time in minutes to add to end of the class
+        :return:
+        """
         if buffer < 0:
             logger_gym_class.warning("End time buffer value should be a positive value. Continuing with supplied value {}".format(buffer))
         self._end_time_buffer = timedelta(minutes=buffer)
 
     def event_object(self, attendees=[]):
+        """
+        Provide a JSON string for creating a Google Calendar event
+        :param attendees: List of email addressed to include in the event
+        :return: JSON string to parameterize calendar event
+        """
         return {
             'id': self.hash,
             'status': 'tentative',
