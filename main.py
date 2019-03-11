@@ -97,6 +97,8 @@ def main():
         sleep(config.rate_limit_delay)
 
         # Create event data
+        gym_class.start_time_buffer = config.event_start_time_buffer
+        gym_class.end_time_buffer = config.event_end_time_buffer
         event = gym_class.event_object(attendees=secrets.invite_addresses)
 
         # Add a new or update an existing calendar event

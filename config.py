@@ -14,6 +14,11 @@ event_timezone = "America/Los_Angeles"
 # If weeks_to_grab = 2, the script will pull events from the current week, and next week.
 weeks_to_grab = 2
 
+# Buffer time to add to calendar events.  Start time moves the start time earlier, and end time buffer moves the
+# end time later.  These times are expressed in minutes.
+event_start_time_buffer = 10
+event_end_time_buffer = 15
+
 # List of the gyms to scan for available classes from
 # You must obtain the gym's id_number by browsing classes from that gym and extracting the number from the URL
 gyms = [

@@ -55,7 +55,7 @@ class Gym:
         if data is not None:
             for day in data.keys():
                 for gym_class_data in data[day]:
-                    self.classes.append(GymClass(self, json_string=gym_class_data))
+                    self.classes.append(GymClass.from_json(self, json_string=gym_class_data))
         else:
             logger_gym.error("Retries for url {} exceeded - forfeiting".format(url))
 
